@@ -1,0 +1,101 @@
+open eclipse
+File > New > Java Project 
+filename - WordCount > next > libraries > 
+Add External Jars > File System > usr > lib > hadoop > select all jar files > ok >
+Add External Jars > File System > usr > lib > hadoop > client > select all the jar files > ok 
+> Finish 
+
+WordCount > src > right_click > new > class > name - WordCount > Finish 
+
+//type this code 
+
+import java.io.IOException;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
+
+public class WordCount {
+
+	public static class Map extends Mapper<LongWritable, Text, Text, IntWritable> {
+
+		public void map(LongWritable key, Text value, Context context)
+				throws IOException, InterruptedException {
+			String line = value.toString();
+			for (String word : line.split("\\W+")) {
+				if (word.length() > 0) {
+					context.write(new Text(word), new IntWritable(1));
+				}
+			}
+		}
+	}
+
+	public static class Reduce extends Reducer<Text, IntWritable, Text, IntWritable> {
+
+		public void reduce(Text key, Iterable<IntWritable> values,
+				Context context) throws IOException, InterruptedException {
+			int sum = 0;
+			for (IntWritable x : values) {
+				sum += x.get();
+			}
+			context.write(key, new IntWritable(sum));
+		}
+	}
+
+	public static void main(String[] args) throws Exception {
+
+		Configuration conf = new Configuration();
+
+		Job job = new Job(conf, "WordC");
+
+		// SET MAPPER, REDUCER, JAR
+		job.setJarByClass(WordCount.class);
+		job.setMapperClass(Map.class);
+		job.setReducerClass(Reduce.class);
+
+		// SET OUT KEY-VALUE CLASS
+		job.setOutputKeyClass(Text.class);
+		job.setOutputValueClass(IntWritable.class);
+
+		// SET TYPE OF INPUT AND OUTPUT TO THE PROGRAM
+		job.setInputFormatClass(TextInputFormat.class);
+		job.setOutputFormatClass(TextOutputFormat.class);
+
+		// SET INPUT AND OUTPUT PATH
+		FileInputFormat.setInputPaths(job, new Path(args[0]));
+		FileOutputFormat.setOutputPath(job, new Path(args[1]));
+
+		// Exit
+		System.exit(job.waitForCompletion(true) ? 0 : 1);
+
+	}
+}
+
+save > right_click on WordCount > Export > Java > Jar file > next 
+browse > cloudera > name - WordCount.jar > ok > //tick WordCount,src , .classpath, .project if not already ticked > Finish 
+
+
+// check 
+
+Computer > file system > home > cloudera 
+create a input.txt file in cloudera dictory 
+
+open terminal 
+hdfs dfs -ls /
+hdfs dfs -mkdir /inputfolder 
+hdfs dfs -put /home/cloudera/input.txt /inputfolder/
+hdfs dfs -cat /inputfolder/input.txt
+hadoop jar /home/cloudera/WordCount.jar WordCount /inputfolder/input.txt /output
+hdfs dfs -ls /output
+hdfs dfs -cat /output/<file name> or hdfs dfs -cat /output/*
+
+ 
